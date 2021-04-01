@@ -1,0 +1,11 @@
+CleanerGoroutineCap: 100
+FastDfsStoragePath: "/home/fastdfs/storage/data/"
+DBType: "mysql"
+DatabaseName: ""
+TableName: ""
+Field: ""
+Username: "test"
+Password: "test"
+IPAddr: "127.0.0.1"
+ListenPort: 3306
+Protocol: "tcp"

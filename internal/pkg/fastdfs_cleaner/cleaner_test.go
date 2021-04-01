@@ -45,7 +45,6 @@ func TestCleaner_Clean(t *testing.T) {
 		fields  fields
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "test 10 capacity goroutine pool",
 			fields: fields{
