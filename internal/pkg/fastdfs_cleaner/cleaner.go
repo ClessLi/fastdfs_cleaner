@@ -8,22 +8,35 @@ import (
 	"time"
 )
 
-type Cleaner struct {
-	poolCap int
-	locker  sync.Locker
-	storage Storage
+type remover interface {
+	Remove(filepath string) error
 }
 
-func NewCleaner(poolCap int, storage Storage) Cleaner {
+type osRemover struct {
+}
+
+func (o osRemover) Remove(filepath string) error {
+	return os.Remove(filepath)
+}
+
+type Cleaner struct {
+	poolCap     int
+	fileRemover remover
+	locker      sync.Locker
+	storage     Storage
+}
+
+func NewCleaner(poolCap int, rmr remover, storage Storage) Cleaner {
 	return Cleaner{
-		poolCap: poolCap,
-		locker:  new(sync.Mutex),
-		storage: storage,
+		poolCap:     poolCap,
+		fileRemover: rmr,
+		locker:      new(sync.Mutex),
+		storage:     storage,
 	}
 }
 
 func NewCleanerFromConfig() Cleaner {
-	return NewCleaner(GetSingletonConfigInstance().CleanerGoroutineCap, NewMySQLStorageFromConfig())
+	return NewCleaner(GetSingletonConfigInstance().CleanerGoroutineCap, new(osRemover), NewMySQLStorageFromConfig())
 }
 
 func (c *Cleaner) Clean() error {
@@ -31,24 +44,31 @@ func (c *Cleaner) Clean() error {
 	defer c.locker.Unlock()
 	pool, _ := ants.NewPool(c.poolCap)
 	defer pool.Release()
-	pool.Running()
 	garbageInfos := c.storage.GetAllGarbageInfo()
-	for _, garbageInfo := range garbageInfos {
-		filePath := garbageInfo.GetFilePath()
-		for pool.Cap() >= c.poolCap {
-			time.Sleep(time.Millisecond * 100)
+	c.backgroundClean(pool, garbageInfos)
+	return nil
+}
+
+func (c Cleaner) backgroundClean(pool *ants.Pool, garbageInfos []GarbageInfo) {
+	for i := range garbageInfos {
+		idx := i
+		filePath := garbageInfos[idx].GetFilePath()
+
+		for pool.Free() <= 0 {
+			time.Sleep(time.Millisecond * 10)
 		}
 		err := pool.Submit(func() {
-			err := os.Remove(filePath)
+			//err := os.Remove(filePath)
+			err := c.fileRemover.Remove(filePath)
 			if err != nil {
-				fmt.Println(garbageInfo, err)
+				fmt.Println(garbageInfos[idx], err)
 				return
 			}
-			c.storage.RemoveGarbageInfo(garbageInfo)
+			fmt.Println(garbageInfos[idx].GetFilePath(), "is removed in file system.")
+			c.storage.RemoveGarbageInfo(garbageInfos[idx])
 		})
 		if err != nil {
-			fmt.Println(garbageInfo, err)
+			fmt.Println(garbageInfos[idx], err)
 		}
 	}
-	return nil
 }
