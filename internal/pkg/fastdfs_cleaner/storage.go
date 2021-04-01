@@ -7,6 +7,10 @@ import (
 	"sync"
 )
 
+type TabFastDfs struct {
+	Col string
+}
+
 type Storage interface {
 	RemoveGarbageInfo(info GarbageInfo)
 	GetAllGarbageInfo() []GarbageInfo
@@ -45,13 +49,29 @@ func NewMySQLStorageFromConfig() Storage {
 }
 
 func (m *mysqlStorage) RemoveGarbageInfo(info GarbageInfo) {
-	// TODO: Remove Method
-	panic("implement me")
+	// DONE: Remove Method
+	// panic("implement me")
+	config := GetSingletonConfigInstance()
+	col := info.GetRelativePath()
+	m.db.Raw("delete from ? where ?=?", config.TableName, config.Field, col)
+
 }
 
 func (m mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
-	// TODO: Get All Method
-	panic("implement me")
+	// DONE: Get All Method
+	//panic("implement me")
+	var (
+		data   []TabFastDfs
+		config = singletonConfigInstance
+		infos  = make([]GarbageInfo, 0)
+	)
+
+	m.db.Raw("select ? from ? limit 1000", config.Field, config.TableName).Scan(&data)
+
+	for _, i := range data {
+		infos = append(infos, newRelativePathGarbageInfo(config.FastDfsStoragePath, i.Col))
+	}
+	return infos
 }
 
 type GarbageInfosQueue interface {

@@ -6,6 +6,7 @@ import (
 
 type GarbageInfo interface {
 	GetFilePath() string
+	GetRelativePath() string
 }
 
 type relativePathGarbageInfo struct {
@@ -22,4 +23,8 @@ func newRelativePathGarbageInfo(workspace, relativePath string) GarbageInfo {
 
 func (r relativePathGarbageInfo) GetFilePath() string {
 	return filepath.Join(r.workspace, r.relativePath)
+}
+
+func (r relativePathGarbageInfo) GetRelativePath() string {
+	return r.relativePath
 }
