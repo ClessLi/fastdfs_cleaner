@@ -7,10 +7,6 @@ import (
 	"sync"
 )
 
-type TabFastDfs struct {
-	Col string
-}
-
 type Storage interface {
 	RemoveGarbageInfo(info GarbageInfo)
 	GetAllGarbageInfo() []GarbageInfo
