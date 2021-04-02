@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/panjf2000/ants/v2"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -15,8 +16,18 @@ type remover interface {
 type osRemover struct {
 }
 
-func (o osRemover) Remove(filepath string) error {
-	return os.Remove(filepath)
+func (o osRemover) Remove(path string) error {
+	err := os.Remove(path)
+	if err != nil {
+		fmt.Printf("remove file %s failed, cased by %s\n", path, err)
+		dir := filepath.Dir(path)
+		_, err = os.Stat(dir)
+		if err == nil || os.IsExist(err) {
+			return nil
+		}
+		return fmt.Errorf("file directory '%s' check error: %s", dir, err)
+	}
+	return nil
 }
 
 type Cleaner struct {
@@ -44,8 +55,9 @@ func (c *Cleaner) Clean() error {
 	defer c.locker.Unlock()
 	pool, _ := ants.NewPool(c.poolCap)
 	defer pool.Release()
-	garbageInfos := c.storage.GetAllGarbageInfo()
-	c.backgroundClean(pool, garbageInfos)
+	for garbageInfos := c.storage.GetAllGarbageInfo(); len(garbageInfos) > 0; garbageInfos = c.storage.GetAllGarbageInfo() {
+		c.backgroundClean(pool, garbageInfos)
+	}
 	return nil
 }
 
@@ -61,7 +73,7 @@ func (c Cleaner) backgroundClean(pool *ants.Pool, garbageInfos []GarbageInfo) {
 			//err := os.Remove(filePath)
 			err := c.fileRemover.Remove(filePath)
 			if err != nil {
-				fmt.Println(garbageInfos[idx], err)
+				fmt.Printf("%s removed failed in file system, cased by: %s", filePath, err)
 				return
 			}
 			fmt.Println(garbageInfos[idx].GetFilePath(), "is removed in file system.")

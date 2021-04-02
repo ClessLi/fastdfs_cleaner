@@ -17,6 +17,7 @@ func (m mockRemover) Remove(filepath string) error {
 }
 
 type mockStorage struct {
+	once *sync.Once
 }
 
 func (m mockStorage) RemoveGarbageInfo(info GarbageInfo) {
@@ -26,10 +27,12 @@ func (m mockStorage) RemoveGarbageInfo(info GarbageInfo) {
 func (m mockStorage) GetAllGarbageInfo() []GarbageInfo {
 	infos := make([]GarbageInfo, 0)
 	ws := "/home/fastdfs/storage/"
-	for i := 0; i < 100; i++ {
-		//relativePath := fmt.Sprintf("group1/M00/%d/B9/CgFMY2BcAi-AHYzqAAbghrRaoKw831.pdf", i)
-		infos = append(infos, newRelativePathGarbageInfo(ws, fmt.Sprintf("group1/M00/%d/B9/CgFMY2BcAi-AHYzqAAbghrRaoKw831.pdf", i)))
-	}
+	m.once.Do(func() {
+		for i := 0; i < 100; i++ {
+			//relativePath := fmt.Sprintf("group1/M00/%d/B9/CgFMY2BcAi-AHYzqAAbghrRaoKw831.pdf", i)
+			infos = append(infos, newRelativePathGarbageInfo(ws, fmt.Sprintf("group1/M00/%d/B9/CgFMY2BcAi-AHYzqAAbghrRaoKw831.pdf", i)))
+		}
+	})
 	return infos
 }
 
@@ -51,7 +54,7 @@ func TestCleaner_Clean(t *testing.T) {
 				poolCap:     10,
 				fileRemover: new(mockRemover),
 				locker:      new(sync.Mutex),
-				storage:     new(mockStorage),
+				storage:     &mockStorage{once: new(sync.Once)},
 			},
 			wantErr: false,
 		},

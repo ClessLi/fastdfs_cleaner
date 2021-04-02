@@ -53,8 +53,14 @@ func (m *mysqlStorage) RemoveGarbageInfo(info GarbageInfo) {
 	m.rwLocker.Lock()
 	defer m.rwLocker.Unlock()
 	config := GetSingletonConfigInstance()
-	col := info.GetRelativePath()
-	m.db.Exec(fmt.Sprintf("delete from %s where `%s` = '%s'", config.TableName, config.Field, col))
+	colValue := info.GetRelativePath()
+	m.db.Exec(fmt.Sprintf("delete from %s where `%s` = '%s'", config.TableName, config.Field, colValue))
+	var count int64
+	m.db.Table(config.TableName).Select(config.Field).Where("? = ?", config.Field, colValue).Count(&count)
+	if count > 0 {
+		fmt.Printf("garbage data '%s' is not removed in database", colValue)
+	}
+	fmt.Printf("garbage data '%s' is removed in database", colValue)
 }
 
 func (m mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
