@@ -1,6 +1,7 @@
 package fastdfs_cleaner
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v2"
 	"sync"
 )
@@ -26,12 +27,16 @@ type Config struct {
 	Protocol   string `yaml:"Protocol"`
 }
 
+func SetConfigFilePath(path string) {
+	configFilepath = path
+}
+
 func GetSingletonConfigInstance() *Config {
 	onceForSingletonConfig.Do(func() {
 		if singletonConfigInstance == nil {
 			configData, err := readFile(configFilepath)
 			if err != nil {
-				panic("read config failed, cased by: " + err.Error())
+				panic(fmt.Sprintf("read config (%s) failed, cased by: %s", configFilepath, err))
 			}
 			var config Config
 			err = yaml.Unmarshal(configData, &config)

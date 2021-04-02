@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/ClessLi/fastdfs_cleaner/internal/pkg/fastdfs_cleaner"
 	"os"
 )
 
@@ -21,4 +22,6 @@ func init() {
 		flag.Usage()
 		os.Exit(0)
 	}
+
+	fastdfs_cleaner.SetConfigFilePath(*configPath)
 }
