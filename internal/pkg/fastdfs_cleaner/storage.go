@@ -50,26 +50,36 @@ func NewMySQLStorageFromConfig() Storage {
 
 func (m *mysqlStorage) RemoveGarbageInfo(info GarbageInfo) {
 	// DONE: Remove Method
-	// panic("implement me")
+	m.rwLocker.Lock()
+	defer m.rwLocker.Unlock()
 	config := GetSingletonConfigInstance()
 	col := info.GetRelativePath()
-	m.db.Raw("delete from ? where ?=?", config.TableName, config.Field, col)
-
+	m.db.Exec(fmt.Sprintf("delete from %s where `%s` = '%s'", config.TableName, config.Field, col))
 }
 
 func (m mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
 	// DONE: Get All Method
-	//panic("implement me")
 	var (
-		data   []TabFastDfs
-		config = singletonConfigInstance
+		config = GetSingletonConfigInstance()
 		infos  = make([]GarbageInfo, 0)
 	)
+	m.rwLocker.RLock()
+	defer m.rwLocker.RUnlock()
 
-	m.db.Raw("select ? from ? limit 1000", config.Field, config.TableName).Scan(&data)
+	rows, err := m.db.Table(config.TableName).Select(config.Field).Limit(1000).Rows()
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
 
-	for _, i := range data {
-		infos = append(infos, newRelativePathGarbageInfo(config.FastDfsStoragePath, i.Col))
+	for rows.Next() {
+		var value string
+		err = rows.Scan(&value)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		infos = append(infos, newRelativePathGarbageInfo(config.FastDfsStoragePath, value))
 	}
 	return infos
 }
