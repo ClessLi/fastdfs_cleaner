@@ -58,9 +58,9 @@ func (m *mysqlStorage) RemoveGarbageInfo(info GarbageInfo) {
 	var count int64
 	m.db.Table(config.TableName).Select(config.Field).Where("? = ?", config.Field, colValue).Count(&count)
 	if count > 0 {
-		fmt.Printf("garbage data '%s' is not removed in database", colValue)
+		fmt.Printf("garbage data '%s' is not removed in database\n", colValue)
 	}
-	fmt.Printf("garbage data '%s' is removed in database", colValue)
+	fmt.Printf("garbage data '%s' is removed in database\n", colValue)
 }
 
 func (m mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
