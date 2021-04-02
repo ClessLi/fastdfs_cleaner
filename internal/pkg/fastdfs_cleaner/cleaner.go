@@ -63,7 +63,7 @@ func (c *Cleaner) Clean() error {
 	// loop get and clean garbage infos, until empty.
 	for garbageInfos := c.storage.GetAllGarbageInfo(); len(garbageInfos) > 0; garbageInfos = c.storage.GetAllGarbageInfo() {
 		c.backgroundClean(pool, garbageInfos)
-		c.waitGorotinesIfTaskNumLessThanPoolCap(len(garbageInfos), pool)
+		c.waitGoroutines(pool)
 	}
 
 	return nil
@@ -96,12 +96,12 @@ func (c Cleaner) backgroundClean(pool *ants.Pool, garbageInfos []GarbageInfo) {
 	}
 }
 
-func (c *Cleaner) waitGorotinesIfTaskNumLessThanPoolCap(taskNum int, pool *ants.Pool) {
-	// wait goroutines, if task num less than pool cap
-	if taskNum < c.poolCap {
-		// wait per 10ms, if pool is not empty
-		for pool.Running() > 0 {
-			time.Sleep(time.Millisecond * 10)
-		}
+func (c *Cleaner) waitGoroutines(pool *ants.Pool) {
+	// wait per 10ms, if pool is not empty
+	for pool.Running() > 0 {
+		time.Sleep(time.Millisecond * 10)
 	}
+	// wait goroutines, if task num less than pool cap
+	//if taskNum < c.poolCap {
+	//}
 }
