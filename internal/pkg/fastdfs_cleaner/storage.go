@@ -7,10 +7,6 @@ import (
 	"sync"
 )
 
-type TabFastDfs struct {
-	Col string
-}
-
 type Storage interface {
 	RemoveGarbageInfo(info GarbageInfo)
 	GetAllGarbageInfo() []GarbageInfo
@@ -55,12 +51,11 @@ func (m *mysqlStorage) RemoveGarbageInfo(info GarbageInfo) {
 	config := GetSingletonConfigInstance()
 	colValue := info.GetRelativePath()
 	m.db.Exec(fmt.Sprintf("delete from %s where `%s` = '%s'", config.TableName, config.Field, colValue))
-	var count int64
-	m.db.Table(config.TableName).Select(config.Field).Where("? = ?", config.Field, colValue).Count(&count)
-	if count > 0 {
-		fmt.Printf("garbage data '%s' is not removed in database\n", colValue)
+	if m.isRemoved(colValue) {
+		fmt.Printf("garbage data '%s' is removed in database.\n", colValue)
+	} else {
+		fmt.Printf("garbage data '%s' is not removed in database.\n", colValue)
 	}
-	fmt.Printf("garbage data '%s' is removed in database\n", colValue)
 }
 
 func (m mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
@@ -88,6 +83,13 @@ func (m mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
 		infos = append(infos, newRelativePathGarbageInfo(config.FastDfsStoragePath, value))
 	}
 	return infos
+}
+
+func (m mysqlStorage) isRemoved(value string) bool {
+	var count int64
+	config := GetSingletonConfigInstance()
+	m.db.Table(config.TableName).Select(config.Field).Where("? = ?", config.Field, value).Count(&count)
+	return count == 0
 }
 
 type GarbageInfosQueue interface {

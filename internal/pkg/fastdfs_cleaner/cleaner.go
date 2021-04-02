@@ -27,6 +27,7 @@ func (o osRemover) Remove(path string) error {
 		}
 		return fmt.Errorf("file directory '%s' check error: %s", dir, err)
 	}
+	fmt.Println(path, "is removed in file system.")
 	return nil
 }
 
@@ -51,13 +52,20 @@ func NewCleanerFromConfig() Cleaner {
 }
 
 func (c *Cleaner) Clean() error {
+
 	c.locker.Lock()
 	defer c.locker.Unlock()
+
+	// build pool
 	pool, _ := ants.NewPool(c.poolCap)
 	defer pool.Release()
+
+	// loop get and clean garbage infos, until empty.
 	for garbageInfos := c.storage.GetAllGarbageInfo(); len(garbageInfos) > 0; garbageInfos = c.storage.GetAllGarbageInfo() {
 		c.backgroundClean(pool, garbageInfos)
+		c.waitGorotinesIfTaskNumLessThanPoolCap(len(garbageInfos), pool)
 	}
+
 	return nil
 }
 
@@ -66,9 +74,12 @@ func (c Cleaner) backgroundClean(pool *ants.Pool, garbageInfos []GarbageInfo) {
 		idx := i
 		filePath := garbageInfos[idx].GetFilePath()
 
+		// wait per 10ms, if pool is full
 		for pool.Free() <= 0 {
 			time.Sleep(time.Millisecond * 10)
 		}
+
+		// submit remove task into pool
 		err := pool.Submit(func() {
 			//err := os.Remove(filePath)
 			err := c.fileRemover.Remove(filePath)
@@ -76,11 +87,21 @@ func (c Cleaner) backgroundClean(pool *ants.Pool, garbageInfos []GarbageInfo) {
 				fmt.Printf("%s removed failed in file system, cased by: %s", filePath, err)
 				return
 			}
-			fmt.Println(garbageInfos[idx].GetFilePath(), "is removed in file system.")
 			c.storage.RemoveGarbageInfo(garbageInfos[idx])
 		})
 		if err != nil {
 			fmt.Println(garbageInfos[idx], err)
+		}
+
+	}
+}
+
+func (c *Cleaner) waitGorotinesIfTaskNumLessThanPoolCap(taskNum int, pool *ants.Pool) {
+	// wait goroutines, if task num less than pool cap
+	if taskNum < c.poolCap {
+		// wait per 10ms, if pool is not empty
+		for pool.Running() > 0 {
+			time.Sleep(time.Millisecond * 10)
 		}
 	}
 }
