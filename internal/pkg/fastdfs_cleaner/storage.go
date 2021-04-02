@@ -67,7 +67,7 @@ func (m mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
 	m.rwLocker.RLock()
 	defer m.rwLocker.RUnlock()
 
-	rows, err := m.db.Table(config.TableName).Select(config.Field).Limit(1000).Rows()
+	rows, err := m.db.Table(config.TableName).Select(config.Field).Distinct().Limit(1000).Rows()
 	if err != nil {
 		fmt.Println(err)
 		return nil
