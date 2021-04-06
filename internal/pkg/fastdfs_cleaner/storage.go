@@ -74,7 +74,7 @@ func (m *mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
 
 	for rows.Next() {
 		var value string
-		var idx int
+		var idx string
 		err = rows.Scan(&idx, &value)
 		if err != nil {
 			fmt.Println(err)
@@ -105,7 +105,7 @@ func (m *mysqlStorage) removeGarbageInfos() {
 		indexesSql := ""
 		var records int64 = 0
 		for !m.deleteBuff.IsEmpty() {
-			indexesSql += fmt.Sprintf("'%d', ", m.deleteBuff.Pop().GetIndex())
+			indexesSql += fmt.Sprintf("'%s', ", m.deleteBuff.Pop().GetIndex())
 			records++
 		}
 		indexesSql = strings.TrimRight(indexesSql, ", ")

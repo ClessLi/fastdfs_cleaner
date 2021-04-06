@@ -101,7 +101,7 @@ func Test_mysqlStorage_RemoveGarbageInfo(t *testing.T) {
 				deleteBuff: NewGarbageInfosQueue(),
 				rwLocker:   new(sync.RWMutex),
 			},
-			args: args{info: newRelativePathGarbageInfo(config.FastDfsStoragePath, "group1/1/2/kljxklf.pdf", 7)},
+			args: args{info: newRelativePathGarbageInfo(config.FastDfsStoragePath, "group1/1/2/kljxklf.pdf", "8")},
 		},
 	}
 	for _, tt := range tests {

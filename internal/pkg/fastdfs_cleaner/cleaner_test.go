@@ -30,7 +30,7 @@ func (m mockStorage) GetAllGarbageInfo() []GarbageInfo {
 	m.once.Do(func() {
 		for i := 0; i < 100; i++ {
 			//relativePath := fmt.Sprintf("group1/M00/%d/B9/CgFMY2BcAi-AHYzqAAbghrRaoKw831.pdf", i)
-			infos = append(infos, newRelativePathGarbageInfo(ws, fmt.Sprintf("group1/M00/%d/B9/CgFMY2BcAi-AHYzqAAbghrRaoKw831.pdf", i), i))
+			infos = append(infos, newRelativePathGarbageInfo(ws, fmt.Sprintf("group1/M00/%d/B9/CgFMY2BcAi-AHYzqAAbghrRaoKw831.pdf", i), fmt.Sprintf("%d", i)))
 		}
 	})
 	return infos
