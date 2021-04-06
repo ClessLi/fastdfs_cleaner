@@ -16,12 +16,12 @@ type Storage interface {
 
 type mysqlStorage struct {
 	db         *gorm.DB
-	rowLimit   uint
+	rowLimit   int
 	deleteBuff GarbageInfosQueue
 	rwLocker   *sync.RWMutex
 }
 
-func newMySQLStorage(db *gorm.DB, rowLimit uint, queue GarbageInfosQueue) Storage {
+func newMySQLStorage(db *gorm.DB, rowLimit int, queue GarbageInfosQueue) Storage {
 	storage := &mysqlStorage{
 		db:         db,
 		rowLimit:   rowLimit,
@@ -47,7 +47,7 @@ func NewMySQLStorageFromConfig() Storage {
 	if err != nil {
 		panic(err)
 	}
-	return newMySQLStorage(mysqlDB, 1000, NewGarbageInfosQueue())
+	return newMySQLStorage(mysqlDB, config.TaskPoolCap, NewGarbageInfosQueue())
 }
 
 func (m *mysqlStorage) RemoveGarbageInfo(info GarbageInfo) {

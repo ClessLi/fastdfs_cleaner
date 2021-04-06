@@ -81,7 +81,7 @@ func Test_mysqlStorage_RemoveGarbageInfo(t *testing.T) {
 	}
 	type fields struct {
 		db         *gorm.DB
-		rowLimit   uint
+		rowLimit   int
 		deleteBuff GarbageInfosQueue
 		rwLocker   *sync.RWMutex
 	}
@@ -101,7 +101,7 @@ func Test_mysqlStorage_RemoveGarbageInfo(t *testing.T) {
 				deleteBuff: NewGarbageInfosQueue(),
 				rwLocker:   new(sync.RWMutex),
 			},
-			args: args{info: newRelativePathGarbageInfo(config.FastDfsStoragePath, "group1/1/2/kljxklf.pdf", "8")},
+			args: args{info: newRelativePathGarbageInfo(config.FastDfsStoragePath, "group1/1/2/kljxklf.pdf", "9")},
 		},
 	}
 	for _, tt := range tests {

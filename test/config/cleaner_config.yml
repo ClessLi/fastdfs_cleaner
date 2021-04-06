@@ -1,4 +1,5 @@
-CleanerGoroutineCap: 100
+TaskPoolCap: 1000
+CleanThreshold: 100
 FastDfsStoragePath: "/home/fastdfs/storage/data/"
 DBType: "mysql"
 DatabaseName: ""

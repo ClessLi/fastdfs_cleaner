@@ -13,11 +13,12 @@ var (
 )
 
 type Config struct {
-	CleanerGoroutineCap int    `yaml:"CleanerGoroutineCap"`
-	FastDfsStoragePath  string `yaml:"FastDfsStoragePath"`
-	DBType              string `yaml:"DBType"`
-	DatabaseName        string `yaml:"DatabaseName"`
-	TableName           string `yaml:"TableName"`
+	TaskPoolCap        int    `yaml:"TaskPoolCap"`
+	CleanThreshold     int    `yaml:"CleanThreshold"`
+	FastDfsStoragePath string `yaml:"FastDfsStoragePath"`
+	DBType             string `yaml:"DBType"`
+	DatabaseName       string `yaml:"DatabaseName"`
+	TableName          string `yaml:"TableName"`
 	//Fields []string `yaml:"Fields,flow"`
 	IndexField string `yaml:"IndexField"`
 	Field      string `yaml:"Field"`

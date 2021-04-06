@@ -32,23 +32,25 @@ func (o osRemover) Remove(path string) error {
 }
 
 type Cleaner struct {
-	poolCap     int
-	fileRemover remover
-	locker      sync.Locker
-	storage     Storage
+	poolCap        int
+	cleanThreshold int
+	fileRemover    remover
+	locker         sync.Locker
+	storage        Storage
 }
 
-func NewCleaner(poolCap int, rmr remover, storage Storage) Cleaner {
+func NewCleaner(poolCap, cleanThreshold int, rmr remover, storage Storage) Cleaner {
 	return Cleaner{
-		poolCap:     poolCap,
-		fileRemover: rmr,
-		locker:      new(sync.Mutex),
-		storage:     storage,
+		poolCap:        poolCap,
+		cleanThreshold: cleanThreshold,
+		fileRemover:    rmr,
+		locker:         new(sync.Mutex),
+		storage:        storage,
 	}
 }
 
 func NewCleanerFromConfig() Cleaner {
-	return NewCleaner(GetSingletonConfigInstance().CleanerGoroutineCap, new(osRemover), NewMySQLStorageFromConfig())
+	return NewCleaner(GetSingletonConfigInstance().TaskPoolCap, GetSingletonConfigInstance().CleanThreshold, new(osRemover), NewMySQLStorageFromConfig())
 }
 
 func (c *Cleaner) Clean() error {
@@ -61,7 +63,7 @@ func (c *Cleaner) Clean() error {
 	defer pool.Release()
 
 	// loop get and clean garbage infos, until empty.
-	for garbageInfos := c.storage.GetAllGarbageInfo(); len(garbageInfos) > 0; garbageInfos = c.storage.GetAllGarbageInfo() {
+	for garbageInfos := c.storage.GetAllGarbageInfo(); len(garbageInfos) > c.cleanThreshold; garbageInfos = c.storage.GetAllGarbageInfo() {
 		c.backgroundClean(pool, garbageInfos)
 		c.waitGoroutines(pool)
 	}
