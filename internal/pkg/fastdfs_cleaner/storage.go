@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"strings"
 	"sync"
+	"time"
 )
 
 type Storage interface {
@@ -14,16 +16,20 @@ type Storage interface {
 
 type mysqlStorage struct {
 	db         *gorm.DB
+	rowLimit   uint
 	deleteBuff GarbageInfosQueue
 	rwLocker   *sync.RWMutex
 }
 
-func newMySQLStorage(db *gorm.DB, queue GarbageInfosQueue) Storage {
-	return &mysqlStorage{
+func newMySQLStorage(db *gorm.DB, rowLimit uint, queue GarbageInfosQueue) Storage {
+	storage := &mysqlStorage{
 		db:         db,
+		rowLimit:   rowLimit,
 		deleteBuff: queue,
 		rwLocker:   new(sync.RWMutex),
 	}
+	go storage.removeGarbageInfos()
+	return storage
 }
 
 func NewMySQLStorageFromConfig() Storage {
@@ -41,24 +47,17 @@ func NewMySQLStorageFromConfig() Storage {
 	if err != nil {
 		panic(err)
 	}
-	return newMySQLStorage(mysqlDB, NewGarbageInfosQueue())
+	return newMySQLStorage(mysqlDB, 1000, NewGarbageInfosQueue())
 }
 
 func (m *mysqlStorage) RemoveGarbageInfo(info GarbageInfo) {
 	// DONE: Remove Method
 	m.rwLocker.Lock()
 	defer m.rwLocker.Unlock()
-	config := GetSingletonConfigInstance()
-	colValue := info.GetRelativePath()
-	m.db.Exec(fmt.Sprintf("delete from %s where `%s` = '%s'", config.TableName, config.Field, colValue))
-	if m.isRemoved(colValue) {
-		fmt.Printf("garbage data '%s' is removed in database.\n", colValue)
-	} else {
-		fmt.Printf("garbage data '%s' is not removed in database.\n", colValue)
-	}
+	m.deleteBuff.Append(info)
 }
 
-func (m mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
+func (m *mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
 	// DONE: Get All Method
 	var (
 		config = GetSingletonConfigInstance()
@@ -67,7 +66,7 @@ func (m mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
 	m.rwLocker.RLock()
 	defer m.rwLocker.RUnlock()
 
-	rows, err := m.db.Table(config.TableName).Select(config.Field).Distinct().Limit(1000).Rows()
+	rows, err := m.db.Table(config.TableName).Select(config.IndexField, config.Field).Limit(int(m.rowLimit)).Rows()
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -75,21 +74,53 @@ func (m mysqlStorage) GetAllGarbageInfo() []GarbageInfo {
 
 	for rows.Next() {
 		var value string
-		err = rows.Scan(&value)
+		var idx int
+		err = rows.Scan(&idx, &value)
 		if err != nil {
 			fmt.Println(err)
 			return nil
 		}
-		infos = append(infos, newRelativePathGarbageInfo(config.FastDfsStoragePath, value))
+		infos = append(infos, newRelativePathGarbageInfo(config.FastDfsStoragePath, value, idx))
 	}
 	return infos
 }
 
-func (m mysqlStorage) isRemoved(value string) bool {
-	var count int64
-	config := GetSingletonConfigInstance()
-	m.db.Table(config.TableName).Select(config.Field).Where("? = ?", config.Field, value).Count(&count)
-	return count == 0
+func (m *mysqlStorage) removeGarbageInfos() {
+	timeTicker := time.NewTicker(time.Second)
+	buffTicker := time.NewTicker(time.Millisecond)
+	for true {
+		select {
+		case <-timeTicker.C:
+			if m.deleteBuff.IsEmpty() {
+				continue
+			}
+			break
+		case <-buffTicker.C:
+			if m.deleteBuff.Size() < int(m.rowLimit) {
+				continue
+			}
+			break
+		}
+		m.rwLocker.Lock()
+		indexesSql := ""
+		var records int64 = 0
+		for !m.deleteBuff.IsEmpty() {
+			indexesSql += fmt.Sprintf("'%d', ", m.deleteBuff.Pop().GetIndex())
+			records++
+		}
+		indexesSql = strings.TrimRight(indexesSql, ", ")
+		config := GetSingletonConfigInstance()
+		sql := fmt.Sprintf("delete from %s where `%s` in (%s)", config.TableName, config.IndexField, indexesSql)
+		m.db.Exec(sql)
+		var count int64
+		m.db.Table(config.TableName).Select(config.Field).Where("? in (?)", config.IndexField, indexesSql).Count(&count)
+		if count > 0 {
+			fmt.Printf("%d garbage record(s) removed failed in database.\n", count)
+			records -= count
+		}
+		fmt.Printf("%d garbage record(s) removed in database.\n", records)
+		m.rwLocker.Unlock()
+	}
 }
 
 type GarbageInfosQueue interface {

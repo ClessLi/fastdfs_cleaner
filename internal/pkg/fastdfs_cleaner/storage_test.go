@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"sync"
 	"testing"
+	"time"
 )
 
 func Test_mysqlStorage_GetAllGarbageInfo(t *testing.T) {
@@ -80,6 +81,7 @@ func Test_mysqlStorage_RemoveGarbageInfo(t *testing.T) {
 	}
 	type fields struct {
 		db         *gorm.DB
+		rowLimit   uint
 		deleteBuff GarbageInfosQueue
 		rwLocker   *sync.RWMutex
 	}
@@ -95,20 +97,26 @@ func Test_mysqlStorage_RemoveGarbageInfo(t *testing.T) {
 			name: "test remove garbage data",
 			fields: fields{
 				db:         mysqlDB,
+				rowLimit:   10,
 				deleteBuff: NewGarbageInfosQueue(),
 				rwLocker:   new(sync.RWMutex),
 			},
-			args: args{info: newRelativePathGarbageInfo(config.FastDfsStoragePath, "group1/1/2/kljxklf.pdf")},
+			args: args{info: newRelativePathGarbageInfo(config.FastDfsStoragePath, "group1/1/2/kljxklf.pdf", 7)},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &mysqlStorage{
 				db:         tt.fields.db,
+				rowLimit:   tt.fields.rowLimit,
 				deleteBuff: tt.fields.deleteBuff,
 				rwLocker:   tt.fields.rwLocker,
 			}
+			go m.removeGarbageInfos()
 			m.RemoveGarbageInfo(tt.args.info)
+			for !m.deleteBuff.IsEmpty() {
+				time.Sleep(time.Millisecond)
+			}
 			t.Log(m.GetAllGarbageInfo())
 		})
 	}

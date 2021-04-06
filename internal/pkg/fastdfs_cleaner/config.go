@@ -19,6 +19,7 @@ type Config struct {
 	DatabaseName        string `yaml:"DatabaseName"`
 	TableName           string `yaml:"TableName"`
 	//Fields []string `yaml:"Fields,flow"`
+	IndexField string `yaml:"IndexField"`
 	Field      string `yaml:"Field"`
 	Username   string `yaml:"Username"`
 	Password   string `yaml:"Password"`
