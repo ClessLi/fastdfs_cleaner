@@ -49,8 +49,9 @@ func initLogout() {
 			if err != nil {
 				panic(err)
 			}
+		} else {
+			panic(err)
 		}
-		panic(err)
 	} else {
 		if !logDirStat.IsDir() {
 			panic(fmt.Sprintf("%s is not a directry", logDir))
