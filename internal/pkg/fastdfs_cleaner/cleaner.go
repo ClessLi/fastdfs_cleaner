@@ -2,6 +2,7 @@ package fastdfs_cleaner
 
 import (
 	"fmt"
+	"github.com/apsdehal/go-logger"
 	"github.com/panjf2000/ants/v2"
 	"os"
 	"path/filepath"
@@ -31,7 +32,11 @@ func (o osRemover) Remove(path string) error {
 	return nil
 }
 
-type Cleaner struct {
+type Cleaner interface {
+	Clean() error
+}
+
+type cleaner struct {
 	poolCap        int
 	cleanThreshold int
 	fileRemover    remover
@@ -40,7 +45,7 @@ type Cleaner struct {
 }
 
 func NewCleaner(poolCap, cleanThreshold int, rmr remover, storage Storage) Cleaner {
-	return Cleaner{
+	return &cleaner{
 		poolCap:        poolCap,
 		cleanThreshold: cleanThreshold,
 		fileRemover:    rmr,
@@ -53,7 +58,15 @@ func NewCleanerFromConfig() Cleaner {
 	return NewCleaner(GetSingletonConfigInstance().TaskPoolCap, GetSingletonConfigInstance().CleanThreshold, new(osRemover), NewMySQLStorageFromConfig())
 }
 
-func (c *Cleaner) Clean() error {
+func NewCleanerFromConfigWithLogger(logFile *os.File, level logger.LogLevel) Cleaner {
+	storage := NewMySQLStorageFromConfig()
+	storage = StorageLoggerProxy(logFile, level)(storage)
+	cleaner := NewCleaner(GetSingletonConfigInstance().TaskPoolCap, GetSingletonConfigInstance().CleanThreshold, new(osRemover), storage)
+	cleaner = CleanerLoggerProxy(logFile, level)(cleaner)
+	return cleaner
+}
+
+func (c *cleaner) Clean() error {
 
 	c.locker.Lock()
 	defer c.locker.Unlock()
@@ -71,7 +84,7 @@ func (c *Cleaner) Clean() error {
 	return nil
 }
 
-func (c Cleaner) backgroundClean(pool *ants.Pool, garbageInfos []GarbageInfo) {
+func (c cleaner) backgroundClean(pool *ants.Pool, garbageInfos []GarbageInfo) {
 	for i := range garbageInfos {
 		idx := i
 		filePath := garbageInfos[idx].GetFilePath()
@@ -98,7 +111,7 @@ func (c Cleaner) backgroundClean(pool *ants.Pool, garbageInfos []GarbageInfo) {
 	}
 }
 
-func (c *Cleaner) waitGoroutines(pool *ants.Pool) {
+func (c *cleaner) waitGoroutines(pool *ants.Pool) {
 	// wait per 10ms, if pool is not empty
 	for pool.Running() > 0 {
 		time.Sleep(time.Millisecond * 10)

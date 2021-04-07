@@ -15,6 +15,7 @@ var (
 type Config struct {
 	TaskPoolCap        int    `yaml:"TaskPoolCap"`
 	CleanThreshold     int    `yaml:"CleanThreshold"`
+	LogDir             string `yaml:"LogDir"`
 	FastDfsStoragePath string `yaml:"FastDfsStoragePath"`
 	DBType             string `yaml:"DBType"`
 	DatabaseName       string `yaml:"DatabaseName"`

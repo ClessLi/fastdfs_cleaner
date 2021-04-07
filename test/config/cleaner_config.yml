@@ -1,5 +1,6 @@
 TaskPoolCap: 1000
 CleanThreshold: 100
+LogDir: "./logs"
 FastDfsStoragePath: "/home/fastdfs/storage/data/"
 DBType: "mysql"
 DatabaseName: ""
