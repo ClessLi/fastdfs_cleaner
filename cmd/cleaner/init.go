@@ -35,10 +35,7 @@ func initLogout() {
 	logDir := config.LogDir
 	if !filepath.IsAbs(logDir) {
 		var err error
-		logDir, err = filepath.Rel(*configPath, logDir)
-		if err != nil {
-			panic(err)
-		}
+		logDir = filepath.Join(filepath.Dir(*configPath), logDir)
 		logDir, err = filepath.Abs(logDir)
 		if err != nil {
 			panic(err)
